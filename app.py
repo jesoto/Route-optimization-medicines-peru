@@ -15,7 +15,6 @@ def safe_get(addr, keys, default=""):
     return default
 
 def format_address_detail(item):
-    # Nominatim returns "address" dict with many optional fields
     addr = item.get("address", {}) or {}
     line1 = item.get("display_name", "")
     city = safe_get(addr, ["city", "town", "village", "suburb", "county"])
@@ -45,7 +44,6 @@ def search_place(query, country_code=""):
     r = requests.get(url, params=params, headers=headers, timeout=25)
     r.raise_for_status()
     data = r.json()
-    # Normalize minimal fields + keep address for preview
     out = []
     for d in data:
         out.append({
@@ -74,6 +72,16 @@ def get_trip(points, osrm_url=DEFAULT_OSRM, roundtrip=True):
     trips = data.get("trips") or []
     return trips[0] if trips else None
 
+def geometry_bounds(geojson):
+    """Devuelve [[min_lat, min_lon], [max_lat, max_lon]] para hacer fit bounds."""
+    coords = geojson.get("coordinates") or []
+    lats, lons = [], []
+    for lon, lat in coords:
+        lats.append(lat); lons.append(lon)
+    if not lats or not lons:
+        return None
+    return [[min(lats), min(lons)], [max(lats), max(lons)]]
+
 # ============ Sidebar ============
 with st.sidebar:
     st.header("Settings")
@@ -99,13 +107,15 @@ with st.sidebar:
 
 # ============ State ============
 if "start_point" not in st.session_state:
-    st.session_state.start_point = None       # (lat, lon, name)
+    st.session_state.start_point = None       # (lat, lon)
 if "start_name" not in st.session_state:
     st.session_state.start_name = None
 if "destinations" not in st.session_state:
     st.session_state.destinations = []        # list of dict: {lat,lon,name}
 if "trip_result" not in st.session_state:
     st.session_state.trip_result = None
+if "fit_all" not in st.session_state:
+    st.session_state.fit_all = False          # toggle para ajustar vista a toda la ruta
 
 st.title("🚚 Ruta Optimizada — LATAM / US / CA")
 
@@ -221,6 +231,7 @@ if st.button("🚀 Calcular ruta"):
                     "trip": trip,
                     "names": [st.session_state.start_name] + [d["name"] for d in st.session_state.destinations]
                 }
+                st.session_state.fit_all = False  # por defecto, centramos en inicio
                 st.success("Ruta lista ✅")
         except Exception as e:
             st.error(f"Error calculando la ruta: {e}")
@@ -229,18 +240,36 @@ if st.button("🚀 Calcular ruta"):
 if st.session_state.trip_result:
     trip = st.session_state.trip_result["trip"]
     names_input = st.session_state.trip_result["names"]
+
     total_km = (trip.get("distance") or 0) / 1000.0
     total_min = minutes_fmt(trip.get("duration") or 0)
     st.info(f"**Total:** {total_km:.2f} km · {total_min}")
 
-    wp = trip.get("waypoints") or []
-    center = [wp[0]["location"][1], wp[0]["location"][0]] if wp else [0,0]
-    m = folium.Map(location=center, zoom_start=12, control_scale=True)
+    # Botón para ajustar vista a toda la ruta
+    col_fit1, col_fit2 = st.columns([1,3])
+    with col_fit1:
+        if st.button("🔍 Ajustar a toda la ruta"):
+            st.session_state.fit_all = True
+    with col_fit2:
+        st.caption("El mapa inicia centrado en el punto de inicio. Usa el botón para encuadrar toda la ruta.")
+
+    # Crear mapa: SIEMPRE centrado en el inicio (como pediste)
+    start_lat, start_lon = st.session_state.start_point
+    m = folium.Map(location=[start_lat, start_lon], zoom_start=14, control_scale=True)
 
     # Ruta principal
-    folium.GeoJson(trip["geometry"], name="Ruta").add_to(m)
+    gj = folium.GeoJson(trip["geometry"], name="Ruta")
+    gj.add_to(m)
 
-    # Marcadores con nombres (según waypoint_index -> índice del input original)
+    # Si el usuario quiere encuadrar toda la ruta, hacemos fit bounds a la polilínea
+    if st.session_state.fit_all:
+        bounds = geometry_bounds(trip["geometry"])
+        if bounds:
+            # fit_bounds espera [[minLat, minLon], [maxLat, maxLon]]
+            m.fit_bounds(bounds)
+
+    # Waypoints y nombres (según waypoint_index -> índice del input original)
+    wp = trip.get("waypoints") or []
     for i, w in enumerate(wp):
         idx_in = (w.get("waypoint_index") or 0)
         name = names_input[idx_in] if 0 <= idx_in < len(names_input) else (w.get("name") or f"Point {i+1}")
