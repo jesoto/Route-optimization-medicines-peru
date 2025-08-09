@@ -1,0 +1,6 @@
+id,name,address,lat,lon,type,open_from,open_to
+D1,Almacén Abancay,"Av. Principal, Abancay, Apurímac",-13.6351,-72.8811,DEPO,08:00,17:00
+C101,Posta Curahuasi,"Curahuasi, Abancay, Apurímac",-13.541,-72.711,DEST,08:30,16:00
+C102,Centro Tamburco,"Tamburco, Abancay, Apurímac",-13.62,-72.889,DEST,08:00,15:30
+C201,Hospital Andahuaylas,"Andahuaylas, Apurímac",-13.655,-73.387,DEST,09:00,17:00
+C301,Centro Chincheros,"Chincheros, Apurímac",-13.518,-73.728,DEST,09:30,16:30

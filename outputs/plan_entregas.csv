@@ -1,0 +1,9 @@
+vehicle,seq,node_index,id,name
+0,0,0,D1,Almacén Abancay
+0,1,4,C301,Centro Chincheros
+0,2,3,C201,Hospital Andahuaylas
+0,3,2,C102,Centro Tamburco
+0,4,1,C101,Posta Curahuasi
+0,5,0,D1,Almacén Abancay
+1,0,0,D1,Almacén Abancay
+1,1,0,D1,Almacén Abancay

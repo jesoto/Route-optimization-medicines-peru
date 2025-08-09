@@ -1,0 +1,7 @@
+vehicle,from_id,to_id,from_name,to_name,meters,seconds
+0,D1,C301,Almacén Abancay,Centro Chincheros,215476.8,16644.4
+0,C301,C201,Centro Chincheros,Hospital Andahuaylas,75271.6,5842.5
+0,C201,C102,Hospital Andahuaylas,Centro Tamburco,148160.3,11792.2
+0,C102,C101,Centro Tamburco,Posta Curahuasi,59241.8,5269.1
+0,C101,D1,Posta Curahuasi,Almacén Abancay,67692.2,4988.2
+1,D1,D1,Almacén Abancay,Almacén Abancay,0.0,0.0
