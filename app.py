@@ -7,15 +7,16 @@ from streamlit_folium import st_folium
 # -----------------------
 # Config
 # -----------------------
-st.set_page_config(page_title="Route Optimizer Peru", layout="wide")
+st.set_page_config(page_title="Route Optimizer", layout="wide")
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 DEFAULT_OSRM = "https://router.project-osrm.org"
-USER_AGENT = "route-optimizer-peru-demo/1.0 (contact: you@example.com)"  # cámbialo
+USER_AGENT = "route-optimizer-app/1.0 (contact: you@example.com)"  # cámbialo por el tuyo
 
 # -----------------------
 # Helpers
 # -----------------------
-def geocode_search(query: str, limit: int = 6) -> List[Dict]:
+def geocode_search(query: str, limit: int = 6, country_code: str = "") -> List[Dict]:
+    """Search places via Nominatim. Optional country filter (ISO-2)."""
     if not query:
         return []
     params = {
@@ -23,8 +24,9 @@ def geocode_search(query: str, limit: int = 6) -> List[Dict]:
         "format": "json",
         "limit": limit,
         "addressdetails": 1,
-        "countrycodes": "pe",
     }
+    if country_code.strip():
+        params["countrycodes"] = country_code.strip().lower()
     headers = {"User-Agent": USER_AGENT}
     r = requests.get(NOMINATIM_URL, params=params, headers=headers, timeout=20)
     r.raise_for_status()
@@ -76,10 +78,9 @@ def format_duration(seconds: float) -> str:
 
 def brute_force_from_start(dist, n_dests: int, roundtrip: bool) -> List[int]:
     """
-    Hay 1 punto de partida fijo (índice 0) y n_dests destinos (índices 1..n_dests).
-    Devuelve el mejor orden (mínima distancia):
-      - roundtrip=True: 0 -> perm(1..n) -> 0
-      - roundtrip=False: 0 -> perm(1..n)
+    0 = start fijo; destinos = 1..n.
+    roundtrip=True: 0 -> perm(1..n) -> 0
+    roundtrip=False: 0 -> perm(1..n)
     """
     mids = list(range(1, n_dests + 1))
     best, best_cost = None, math.inf
@@ -107,7 +108,7 @@ def build_map(pts, names, order, route_geojson, legs_idx, total_km, total_time_s
     PolyLine(path, weight=6, opacity=0.9,
              tooltip=f"Total {total_km:.2f} km · {total_time_str}").add_to(m)
 
-    # Segmentos con tooltip (líneas casi invisibles para hover)
+    # Segmentos casi invisibles con tooltip por tramo
     for (a, b, dm, ds) in legs_idx:
         alat, alon = pts[a]; blat, blon = pts[b]
         km = dm / 1000.0
@@ -133,23 +134,24 @@ if "route_result" not in st.session_state:
 # -----------------------
 # UI
 # -----------------------
-st.title("🚚 Route Optimizer — Peru")
-st.caption("Set a **Start point** and up to **5 destinations**, then compute an optimized road route using OSRM.")
+st.title("🚚 Route Optimizer")
+st.caption("Set a **Start** and up to **5 destinations**, then compute an optimized road route using OSRM.")
 
 with st.sidebar:
     st.header("Settings")
     osrm_url = st.text_input("OSRM server URL", value=DEFAULT_OSRM)
+    country_code = st.text_input("Country filter (ISO-2, optional)", value="", help="e.g., 'pe' for Peru, 'us' for USA; empty = global")
     roundtrip = st.checkbox("Round trip (end at start)", value=True)
     optimize = st.checkbox("Optimize order", value=True)
 
-# 1) Start point search
+# 1) Start point
 st.subheader("1) Start point")
 col_s1, col_s2 = st.columns([2,1])
 with col_s1:
-    query_s = st.text_input("🔎 Search start (e.g., 'PUCP Lima')", key="start_query")
+    query_s = st.text_input("🔎 Search start (e.g., 'PUCP Lima' or 'NYC Times Square')", key="start_query")
     if st.button("Search Start", key="btn_search_start"):
         try:
-            st.session_state.search_results_start = geocode_search(query_s)
+            st.session_state.search_results_start = geocode_search(query_s, country_code=country_code)
             if not st.session_state.search_results_start:
                 st.warning("No start results found.")
         except Exception as e:
@@ -173,14 +175,14 @@ if st.session_state.start_point:
     sp = st.session_state.start_point
     st.success(f"Start: **{sp['name']}**  \n({sp['lat']:.6f}, {sp['lon']:.6f})")
 
-# 2) Destination search & list
+# 2) Destinations
 st.subheader("2) Destinations (max 5)")
 col_d1, col_d2 = st.columns([2,1])
 with col_d1:
-    query_d = st.text_input("🔎 Search destination (e.g., 'BCRP Lima')", key="dest_query")
+    query_d = st.text_input("🔎 Search destination (e.g., 'BCRP Lima' or 'Golden Gate Bridge')", key="dest_query")
     if st.button("Search Destination", key="btn_search_dest"):
         try:
-            st.session_state.search_results_dest = geocode_search(query_d)
+            st.session_state.search_results_dest = geocode_search(query_d, country_code=country_code)
             if not st.session_state.search_results_dest:
                 st.warning("No destination results found.")
         except Exception as e:
@@ -233,16 +235,16 @@ if st.button("🧭 Compute optimized route", key="btn_compute"):
             st.error("Add at least one destination.")
             st.stop()
 
-        # Build point list: index 0 = start, then destinations 1..n
+        # Build points: 0 = start, 1..n = destinations
         pts = [(st.session_state.start_point["lat"], st.session_state.start_point["lon"])]
         names = [st.session_state.start_point["name"]]
         for d in st.session_state.destinations:
             pts.append((d["lat"], d["lon"]))
             names.append(d["name"])
 
-        dist, dur = osrm_table(DEFAULT_OSRM if not st.sidebar else osrm_url, pts)
+        dist, dur = osrm_table(osrm_url, pts)
 
-        # Order:
+        # Order
         if len(pts) == 2:
             order = [0, 1] + ([0] if roundtrip else [])
         else:
@@ -253,7 +255,6 @@ if st.button("🧭 Compute optimized route", key="btn_compute"):
                 if roundtrip:
                     order = order + [0]
 
-        # OSRM route needs the actual coordinates in that order:
         ordered_points = [pts[i] for i in order]
         route = osrm_route(osrm_url, ordered_points)
         if not route:
