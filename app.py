@@ -49,19 +49,38 @@ with st.sidebar:
 
     country_map = {
         "🌎 Sin filtro (Global)": "",
-        "🇦🇷 Argentina": "ar", "🇧🇴 Bolivia": "bo", "🇧🇷 Brasil": "br",
-        "🇨🇱 Chile": "cl", "🇨🇴 Colombia": "co", "🇨🇷 Costa Rica": "cr",
-        "🇨🇺 Cuba": "cu", "🇪🇨 Ecuador": "ec", "🇸🇻 El Salvador": "sv",
-        "🇬🇹 Guatemala": "gt", "🇭🇳 Honduras": "hn", "🇲🇽 México": "mx",
-        "🇳🇮 Nicaragua": "ni", "🇵🇦 Panamá": "pa", "🇵🇾 Paraguay": "py",
-        "🇵🇪 Perú": "pe", "🇵🇷 Puerto Rico": "pr", "🇺🇾 Uruguay": "uy",
+        "🇦🇷 Argentina": "ar",
+        "🇧🇴 Bolivia": "bo",
+        "🇧🇷 Brasil": "br",
+        "🇨🇱 Chile": "cl",
+        "🇨🇴 Colombia": "co",
+        "🇨🇷 Costa Rica": "cr",
+        "🇨🇺 Cuba": "cu",
+        "🇪🇨 Ecuador": "ec",
+        "🇸🇻 El Salvador": "sv",
+        "🇬🇹 Guatemala": "gt",
+        "🇭🇳 Honduras": "hn",
+        "🇲🇽 México": "mx",
+        "🇳🇮 Nicaragua": "ni",
+        "🇵🇦 Panamá": "pa",
+        "🇵🇾 Paraguay": "py",
+        "🇵🇪 Perú": "pe",
+        "🇵🇷 Puerto Rico": "pr",
+        "🇺🇾 Uruguay": "uy",
         "🇻🇪 Venezuela": "ve",
+        "🇺🇸 United States": "us",
+        "🇨🇦 Canada": "ca",
     }
-    country_label = st.selectbox("🌍 País para filtrar búsqueda", list(country_map.keys()), index=16)
+
+    # Sugerido: dejar Perú como default; cambia el índice si quieres otro por defecto
+    options = list(country_map.keys())
+    default_idx = options.index("🇵🇪 Perú") if "🇵🇪 Perú" in options else 0
+    country_label = st.selectbox("🌍 País para filtrar búsqueda", options=options, index=default_idx)
     country_code = country_map[country_label]
 
     roundtrip = st.checkbox("Round trip (end at start)", value=True)
-
+    # El orden lo optimiza OSRM Trip; mantenemos opción por si luego integras orden manual
+    optimize = st.checkbox("Optimize order", value=True)
 # ========= Estado =========
 if "start_point" not in st.session_state:
     st.session_state.start_point = None               # (lat, lon, name)
