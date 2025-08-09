@@ -3,7 +3,7 @@ import folium
 from streamlit_folium import st_folium
 import requests
 
-st.set_page_config(page_title="Ruta Optimizada - LATAM/US/CA", layout="wide")
+st.set_page_config(page_title="Optimized Route - LATAM/US/CA", layout="wide")
 DEFAULT_OSRM = "https://router.project-osrm.org"
 
 # ============ Utils ============
@@ -23,7 +23,7 @@ def format_address_detail(item):
     postcode = addr.get("postcode", "")
     parts = []
     if city: parts.append(f"City/District: {city}")
-    if state: parts.append(f"State/Dept/Province: {state}")
+    if state: parts.append(f"State/Province: {state}")
     if country: parts.append(f"Country: {country}")
     if postcode: parts.append(f"Postcode: {postcode}")
     detail = " · ".join(parts) if parts else ""
@@ -73,7 +73,7 @@ def get_trip(points, osrm_url=DEFAULT_OSRM, roundtrip=True):
     return trips[0] if trips else None
 
 def geometry_bounds(geojson):
-    """Devuelve [[min_lat, min_lon], [max_lat, max_lon]] para hacer fit bounds."""
+    """Return [[min_lat, min_lon], [max_lat, max_lon]] for fit bounds."""
     coords = geojson.get("coordinates") or []
     lats, lons = [], []
     for lon, lat in coords:
@@ -88,19 +88,19 @@ with st.sidebar:
     osrm_url = st.text_input("OSRM server URL", value=DEFAULT_OSRM)
 
     country_map = {
-        "🌎 Sin filtro (Global)": "",
-        "🇦🇷 Argentina": "ar", "🇧🇴 Bolivia": "bo", "🇧🇷 Brasil": "br",
+        "🌎 No filter (Global)": "",
+        "🇦🇷 Argentina": "ar", "🇧🇴 Bolivia": "bo", "🇧🇷 Brazil": "br",
         "🇨🇱 Chile": "cl", "🇨🇴 Colombia": "co", "🇨🇷 Costa Rica": "cr",
         "🇨🇺 Cuba": "cu", "🇪🇨 Ecuador": "ec", "🇸🇻 El Salvador": "sv",
-        "🇬🇹 Guatemala": "gt", "🇭🇳 Honduras": "hn", "🇲🇽 México": "mx",
-        "🇳🇮 Nicaragua": "ni", "🇵🇦 Panamá": "pa", "🇵🇾 Paraguay": "py",
-        "🇵🇪 Perú": "pe", "🇵🇷 Puerto Rico": "pr", "🇺🇾 Uruguay": "uy",
+        "🇬🇹 Guatemala": "gt", "🇭🇳 Honduras": "hn", "🇲🇽 Mexico": "mx",
+        "🇳🇮 Nicaragua": "ni", "🇵🇦 Panama": "pa", "🇵🇾 Paraguay": "py",
+        "🇵🇪 Peru": "pe", "🇵🇷 Puerto Rico": "pr", "🇺🇾 Uruguay": "uy",
         "🇻🇪 Venezuela": "ve",
         "🇺🇸 United States": "us", "🇨🇦 Canada": "ca",
     }
     options = list(country_map.keys())
-    default_idx = options.index("🇵🇪 Perú") if "🇵🇪 Perú" in options else 0
-    country_label = st.selectbox("🌍 País para filtrar búsqueda", options, index=default_idx)
+    default_idx = options.index("🇵🇪 Peru") if "🇵🇪 Peru" in options else 0
+    country_label = st.selectbox("🌍 Country filter for search", options, index=default_idx)
     country_code = country_map[country_label]
 
     roundtrip = st.checkbox("Round trip (end at start)", value=True)
@@ -115,89 +115,89 @@ if "destinations" not in st.session_state:
 if "trip_result" not in st.session_state:
     st.session_state.trip_result = None
 if "fit_all" not in st.session_state:
-    st.session_state.fit_all = False          # toggle para ajustar vista a toda la ruta
+    st.session_state.fit_all = False
 
-st.title("🚚 Ruta Optimizada — LATAM / US / CA")
+st.title("🚚 Optimized Route — LATAM / US / CA")
 
 # ============ 1) Start ============
-st.subheader("1️⃣ Punto de inicio")
+st.subheader("1️⃣ Start point")
 col_s1, col_s2 = st.columns([2,1])
 with col_s1:
-    start_query = st.text_input("Buscar inicio (ej. 'PUCP Lima' o '1600 Amphitheatre Pkwy, CA')")
-    if st.button("🔎 Buscar inicio"):
+    start_query = st.text_input("Search start (e.g., 'PUCP Lima' or '1600 Amphitheatre Pkwy, CA')")
+    if st.button("🔎 Search start"):
         try:
             start_results = search_place(start_query, country_code)
             if not start_results:
-                st.warning("Sin resultados para el inicio.")
+                st.warning("No results for start.")
             else:
                 st.session_state.start_search = start_results
         except Exception as e:
-            st.error(f"Error de búsqueda: {e}")
+            st.error(f"Search error: {e}")
 
 with col_s2:
-    if st.button("🗑 Limpiar inicio"):
+    if st.button("🗑 Clear start"):
         st.session_state.start_point = None
         st.session_state.start_name = None
         st.session_state.trip_result = None
 
-# Selector + detalle del inicio
+# Start selector + detail
 start_results = st.session_state.get("start_search", [])
 if start_results:
-    idx = st.selectbox("Selecciona inicio:", list(range(len(start_results))),
+    idx = st.selectbox("Pick a start result:", list(range(len(start_results))),
                        format_func=lambda i: start_results[i]["display_name"])
     line1, detail = format_address_detail(start_results[idx])
-    st.caption(f"**Confirmación:**\n\n{line1}\n\n{detail}")
-    if st.button("✅ Usar este inicio"):
+    st.caption(f"**Confirmation:**\n\n{line1}\n\n{detail}")
+    if st.button("✅ Use this start"):
         sel = start_results[idx]
         st.session_state.start_point = (sel["lat"], sel["lon"])
         st.session_state.start_name = sel["display_name"]
         st.session_state.trip_result = None
-        st.success("Inicio establecido.")
+        st.success("Start set.")
 
 if st.session_state.start_point:
-    st.info(f"Inicio: **{st.session_state.start_name}**\n\n({st.session_state.start_point[0]:.6f}, {st.session_state.start_point[1]:.6f})")
+    st.info(f"Start: **{st.session_state.start_name}**\n\n({st.session_state.start_point[0]:.6f}, {st.session_state.start_point[1]:.6f})")
 
-# ============ 2) Destinos ============
-st.subheader("2️⃣ Destinos (máx. 5)")
+# ============ 2) Destinations ============
+st.subheader("2️⃣ Destinations (max 5)")
 col_d1, col_d2, col_d3 = st.columns([2,1,1])
 with col_d1:
-    dest_query = st.text_input("Buscar destino (ej. 'BCRP Lima' o 'Golden Gate Bridge')")
+    dest_query = st.text_input("Search destination (e.g., 'BCRP Lima' or 'Golden Gate Bridge')")
 with col_d2:
-    if st.button("🔎 Buscar destino"):
+    if st.button("🔎 Search destination"):
         try:
             dest_results = search_place(dest_query, country_code)
             if not dest_results:
-                st.warning("Sin resultados para destino.")
+                st.warning("No results for destination.")
             else:
                 st.session_state.dest_search = dest_results
         except Exception as e:
-            st.error(f"Error de búsqueda: {e}")
+            st.error(f"Search error: {e}")
 with col_d3:
-    if st.button("🧹 Borrar TODOS los destinos"):
+    if st.button("🧹 Clear ALL destinations"):
         st.session_state.destinations = []
         st.session_state.trip_result = None
 
-# Selector + detalle de destino + agregar
+# Destination selector + detail + add
 dest_results = st.session_state.get("dest_search", [])
 if dest_results:
-    didx = st.selectbox("Selecciona destino:", list(range(len(dest_results))),
+    didx = st.selectbox("Pick a destination:", list(range(len(dest_results))),
                         format_func=lambda i: dest_results[i]["display_name"])
     dline1, ddetail = format_address_detail(dest_results[didx])
-    st.caption(f"**Confirmación:**\n\n{dline1}\n\n{ddetail}")
-    if st.button("➕ Agregar destino"):
+    st.caption(f"**Confirmation:**\n\n{dline1}\n\n{ddetail}")
+    if st.button("➕ Add destination"):
         if len(st.session_state.destinations) >= 5:
-            st.warning("Máximo 5 destinos.")
+            st.warning("Maximum 5 destinations.")
         else:
             sel = dest_results[didx]
             st.session_state.destinations.append({
                 "lat": sel["lat"], "lon": sel["lon"], "name": sel["display_name"]
             })
             st.session_state.trip_result = None
-            st.success("Destino agregado.")
+            st.success("Destination added.")
 
-# Lista con eliminación individual
+# Show list with individual delete
 if st.session_state.destinations:
-    st.write("📍 **Destinos actuales:**")
+    st.write("📍 **Current destinations:**")
     del_idx = None
     for i, d in enumerate(st.session_state.destinations):
         c1, c2 = st.columns([8,1])
@@ -211,32 +211,32 @@ if st.session_state.destinations:
         st.session_state.trip_result = None
         st.experimental_rerun()
 else:
-    st.info("Agrega de 1 a 5 destinos.")
+    st.info("Add 1 to 5 destinations.")
 
-# ============ 3) Calcular ============
-st.subheader("3️⃣ Calcular ruta optimizada")
-if st.button("🚀 Calcular ruta"):
+# ============ 3) Compute ============
+st.subheader("3️⃣ Compute optimized route")
+if st.button("🚀 Compute route"):
     if not st.session_state.start_point:
-        st.error("Selecciona un inicio primero.")
+        st.error("Please set a start point first.")
     elif not st.session_state.destinations:
-        st.error("Agrega al menos un destino.")
+        st.error("Please add at least one destination.")
     else:
         try:
             points = [st.session_state.start_point] + [(d["lat"], d["lon"]) for d in st.session_state.destinations]
             trip = get_trip(points, osrm_url=osrm_url, roundtrip=roundtrip)
             if not trip:
-                st.error("OSRM no pudo calcular la ruta. Prueba con otros puntos.")
+                st.error("OSRM could not compute a route. Try different points.")
             else:
                 st.session_state.trip_result = {
                     "trip": trip,
                     "names": [st.session_state.start_name] + [d["name"] for d in st.session_state.destinations]
                 }
-                st.session_state.fit_all = False  # por defecto, centramos en inicio
-                st.success("Ruta lista ✅")
+                st.session_state.fit_all = False  # default: center on start
+                st.success("Route ready ✅")
         except Exception as e:
-            st.error(f"Error calculando la ruta: {e}")
+            st.error(f"Route error: {e}")
 
-# ============ 4) Mapa + segmentos ============
+# ============ 4) Map + segments ============
 if st.session_state.trip_result:
     trip = st.session_state.trip_result["trip"]
     names_input = st.session_state.trip_result["names"]
@@ -245,30 +245,29 @@ if st.session_state.trip_result:
     total_min = minutes_fmt(trip.get("duration") or 0)
     st.info(f"**Total:** {total_km:.2f} km · {total_min}")
 
-    # Botón para ajustar vista a toda la ruta
+    # Fit-to-route button
     col_fit1, col_fit2 = st.columns([1,3])
     with col_fit1:
-        if st.button("🔍 Ajustar a toda la ruta"):
+        if st.button("🔍 Fit to full route"):
             st.session_state.fit_all = True
     with col_fit2:
-        st.caption("El mapa inicia centrado en el punto de inicio. Usa el botón para encuadrar toda la ruta.")
+        st.caption("Map starts centered on the start point. Use the button to fit the whole route.")
 
-    # Crear mapa: SIEMPRE centrado en el inicio (como pediste)
+    # Always center on start (as requested)
     start_lat, start_lon = st.session_state.start_point
     m = folium.Map(location=[start_lat, start_lon], zoom_start=14, control_scale=True)
 
-    # Ruta principal
-    gj = folium.GeoJson(trip["geometry"], name="Ruta")
+    # Main route layer
+    gj = folium.GeoJson(trip["geometry"], name="Route")
     gj.add_to(m)
 
-    # Si el usuario quiere encuadrar toda la ruta, hacemos fit bounds a la polilínea
+    # Fit bounds if requested
     if st.session_state.fit_all:
         bounds = geometry_bounds(trip["geometry"])
         if bounds:
-            # fit_bounds espera [[minLat, minLon], [maxLat, maxLon]]
             m.fit_bounds(bounds)
 
-    # Waypoints y nombres (según waypoint_index -> índice del input original)
+    # Waypoints and names (waypoint_index -> original input order)
     wp = trip.get("waypoints") or []
     for i, w in enumerate(wp):
         idx_in = (w.get("waypoint_index") or 0)
@@ -279,7 +278,7 @@ if st.session_state.trip_result:
             icon=folium.Icon(color="red" if i > 0 else "blue", icon="flag" if i > 0 else "play")
         ).add_to(m)
 
-    # Tooltips por tramo (A→B)
+    # Per-leg tooltips (A→B)
     legs = trip.get("legs") or []
     for i, leg in enumerate(legs):
         if i + 1 >= len(wp):
