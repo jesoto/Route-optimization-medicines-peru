@@ -43,3 +43,48 @@ conda activate vrp_peru
 
 # Install dependencies
 pip install -r requirements.txt
+
+```
+
+## How to Use
+
+### 1️⃣ Set the Start Point
+- Search for a location in the **Start point** section.  
+- Click **Search Start**.  
+- Select the correct result and click **Set as Start**.  
+
+![Texto alternativo](img/111.png)
+
+---
+
+### 2️⃣ Add Destinations
+- Search for each destination (up to 5).  
+- Click **Search Destination** and then **Add destination**.  
+- You can **remove individual destinations** if needed.  
+
+
+![Texto alternativo](img/222.png)
+
+---
+
+### 3️⃣ Compute the Route
+- Select whether to **Optimize order** and **Round trip** from the sidebar settings.  
+- Click **Compute optimized route**.  
+- The system will calculate and display:  
+  - The **optimized route on the map**  
+  - **Total distance & estimated time**  
+  - **Visiting order list**  
+
+![Texto alternativo](img/333.png)
+
+
+---
+
+### 4️⃣ View Results
+- The interactive map allows zooming and panning.  
+- Each point is clickable, showing its location.  
+- The visiting order is listed below the map.  
+
+
+![Texto alternativo](img/444.png)
+
